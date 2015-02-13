@@ -1,6 +1,7 @@
 package de.seelenoede.converter;
 
 import org.apache.commons.io.FileUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDPage;
 
@@ -14,6 +15,8 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.StandardCopyOption;
 import java.util.Iterator;
 import java.util.List;
 import java.util.zip.ZipEntry;
@@ -43,11 +46,33 @@ public class Converter {
         	
         	File f = new File(tmpPath);
         	String files[] = f.list();
-        	progress.setMaximum(files.length-1);
+        	progress.setMaximum((files.length-1) * 2);
+        	
+        	//Pad files
+        	for (int i=0; i<files.length; i++)
+        	{
+        		if(files[i].length()==7)
+        		{
+        			continue;
+        		}
+        		String newName = StringUtils.leftPad(files[i], 7, "0");
+        		File oldFile = new File(tmpPath + files[i]);
+        		File newFile = new File(tmpPath + newName);
+        		Files.move(oldFile.toPath(), newFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
+        		oldFile.delete();
+        		progress.setValue(i);
+        	}
+        	
+        	//Reread the directory
+        	f = new File(tmpPath);
+        	files = f.list();
+        	int act = progress.getValue();
+        	//Zip files
         	for (int i=0; i<files.length; i++) {
         		System.out.println("Adding: "+files[i]);
         		FileInputStream fi = new FileInputStream(tmpPath + files[i]);
         		origin = new BufferedInputStream(fi, BUFFER);
+        		
         		ZipEntry entry = new ZipEntry(tmpPath + files[i]);
         		out.putNextEntry(entry);
         		int count;
@@ -55,7 +80,7 @@ public class Converter {
             	   out.write(data, 0, count);
             	}
             	origin.close();
-            	progress.setValue(i);
+            	progress.setValue(act + i);
         	}
         	out.close();
         	System.out.println("Lösche tmpOrdner");
