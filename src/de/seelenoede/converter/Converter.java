@@ -5,6 +5,7 @@ import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDPage;
 
 import javax.imageio.ImageIO;
+import javax.swing.JProgressBar;
 
 import java.awt.image.BufferedImage;
 import java.io.BufferedInputStream;
@@ -30,7 +31,7 @@ public class Converter {
 	 * Zip images into a cbz file without compression
 	 * @param filePath
 	 */
-	public void zip(String filePath) {
+	public void zip(String filePath, JProgressBar progress) {
 		try{
         	int BUFFER = 2048;
         	BufferedInputStream origin = null;
@@ -42,6 +43,7 @@ public class Converter {
         	
         	File f = new File(tmpPath);
         	String files[] = f.list();
+        	progress.setMaximum(files.length-1);
         	for (int i=0; i<files.length; i++) {
         		System.out.println("Adding: "+files[i]);
         		FileInputStream fi = new FileInputStream(tmpPath + files[i]);
@@ -53,6 +55,7 @@ public class Converter {
             	   out.write(data, 0, count);
             	}
             	origin.close();
+            	progress.setValue(i);
         	}
         	out.close();
         	System.out.println("Lösche tmpOrdner");
@@ -67,7 +70,7 @@ public class Converter {
 	 * convert PDF to multiple images
 	 * @param filePath
 	 */
-	public void convertToImage(String filePath)
+	public void convertToImage(String filePath, JProgressBar progress)
 	{
 		PDDocument document = null;		
 		
@@ -81,7 +84,9 @@ public class Converter {
 		}
 		
 		List<PDPage>pages =  document.getDocumentCatalog().getAllPages();
-        Iterator<PDPage> iter =  pages.iterator(); 
+        int length = pages.size();
+        progress.setMaximum(length);
+		Iterator<PDPage> iter =  pages.iterator(); 
         
         int pageNumber = 0;
 
@@ -92,6 +97,7 @@ public class Converter {
 				BufferedImage image = page.convertToImage();
 				writeImage(image, pageNumber);
 				pageNumber++;
+				progress.setValue(pageNumber);
 			} catch (IOException e) {
 				e.printStackTrace();
 			}

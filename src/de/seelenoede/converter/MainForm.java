@@ -11,6 +11,8 @@ import java.awt.BorderLayout;
 import javax.swing.JPanel;
 import javax.swing.JLabel;
 import javax.swing.JButton;
+import javax.swing.SwingUtilities;
+
 import java.awt.event.ActionListener;
 import java.awt.event.ActionEvent;
 
@@ -18,23 +20,35 @@ import javax.swing.JTextPane;
 
 import java.awt.GridLayout;
 import java.awt.Color;
+import javax.swing.JProgressBar;
+import java.awt.Component;
+import java.awt.Rectangle;
+import javax.swing.border.EmptyBorder;
+import com.jgoodies.forms.layout.FormLayout;
+import com.jgoodies.forms.layout.ColumnSpec;
+import com.jgoodies.forms.layout.RowSpec;
 
 public class MainForm {
 
 	private JFrame frame;
 	private JTextField textField;
 	private static Converter converter;
-	private JTextPane textPane_1;
-	private JTextPane textPane_2;
-	private JPanel panel_1;
-	private JLabel label;
+	private JLabel lblZip;
+	private JLabel lblDone;
+	private JPanel panel_labels;
+	private JLabel lblExtract;
 	private JLabel lblPath;
+	private boolean alreadyRunning;
+	private JPanel panel_progressBars;
+	private JProgressBar progressBar_Extraction;
+	private JProgressBar progressBar_Zip;
+	private JPanel panel_progress;
 
 	/**
 	 * Launch the application.
 	 */
 	public static void main(String[] args) {
-		EventQueue.invokeLater(new Runnable() {
+		SwingUtilities.invokeLater(new Runnable() {
 			public void run() {
 				try {
 					MainForm window = new MainForm();
@@ -57,50 +71,81 @@ public class MainForm {
 	 * Initialize the contents of the frame.
 	 */
 	private void initialize() {
+		alreadyRunning = false;
 		frame = new JFrame("PDF To CBZ Converter");
-		frame.setBackground(Color.WHITE);
+		frame.getContentPane().setBackground(Color.LIGHT_GRAY);
 		frame.setResizable(false);
-		frame.setBounds(100, 100, 450, 142);
+		frame.setBackground(Color.WHITE);
+		frame.setBounds(100, 100, 450, 146);
 		frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+		frame.setLocationRelativeTo(null);
 		frame.getContentPane().setLayout(new BorderLayout(0, 0));
 
-		JPanel panel = new JPanel();
-		panel.setBackground(Color.WHITE);
-		frame.getContentPane().add(panel, BorderLayout.NORTH);
+		JPanel panel_path = new JPanel();
+		panel_path.setBackground(Color.WHITE);
+		frame.getContentPane().add(panel_path, BorderLayout.NORTH);
 
 		lblPath = new JLabel("Path: ");
-		panel.add(lblPath);
+		panel_path.add(lblPath);
 
 		textField = new JTextField();
-		panel.add(textField);
+		panel_path.add(textField);
 		textField.setColumns(30);
 
-		panel_1 = new JPanel();
-		panel_1.setBackground(Color.WHITE);
-		frame.getContentPane().add(panel_1, BorderLayout.CENTER);
-		panel_1.setLayout(new GridLayout(0, 1, 0, 0));
-
-		label = new JLabel("");
-		label.setBackground(Color.WHITE);
-		panel_1.add(label);
-
-		textPane_1 = new JTextPane();
-		textPane_1.setBackground(Color.WHITE);
-		textPane_1.setEditable(false);
-		panel_1.add(textPane_1);
-
-		textPane_2 = new JTextPane();
-		textPane_2.setBackground(Color.WHITE);
-		textPane_2.setEditable(false);
-		panel_1.add(textPane_2);
-
 		JButton btnStart = new JButton("Start");
+		btnStart.setSelected(true);
+		btnStart.setBackground(Color.LIGHT_GRAY);
 		btnStart.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent arg0) {
-				startConvert();
+				Thread noBlock = new Thread() {
+					public void run() {
+						resetElements();
+						startConvert();
+					}
+				};
+				if (!alreadyRunning) {
+					noBlock.start();
+					alreadyRunning = true;
+				}
+
 			}
 		});
 		frame.getContentPane().add(btnStart, BorderLayout.SOUTH);
+
+		panel_progress = new JPanel();
+		frame.getContentPane().add(panel_progress, BorderLayout.CENTER);
+		panel_progress.setLayout(new FormLayout(new ColumnSpec[] {
+				ColumnSpec.decode("116px"), ColumnSpec.decode("318px:grow"), },
+				new RowSpec[] { RowSpec.decode("60px"), }));
+
+		panel_labels = new JPanel();
+		panel_progress.add(panel_labels, "1, 1, fill, fill");
+		panel_labels.setBackground(Color.WHITE);
+		panel_labels.setLayout(new GridLayout(0, 1, 0, 0));
+
+		lblExtract = new JLabel("");
+		lblExtract.setBackground(Color.WHITE);
+		panel_labels.add(lblExtract);
+
+		lblZip = new JLabel("");
+		lblZip.setBackground(Color.WHITE);
+		panel_labels.add(lblZip);
+
+		lblDone = new JLabel("");
+		lblDone.setBackground(Color.WHITE);
+		panel_labels.add(lblDone);
+
+		panel_progressBars = new JPanel();
+		panel_progress.add(panel_progressBars, "2, 1, fill, fill");
+		panel_progressBars.setBorder(new EmptyBorder(0, 0, 0, 10));
+		panel_progressBars.setBackground(Color.WHITE);
+		panel_progressBars.setLayout(new GridLayout(3, 1, 0, 0));
+
+		progressBar_Extraction = new JProgressBar();
+		panel_progressBars.add(progressBar_Extraction);
+
+		progressBar_Zip = new JProgressBar();
+		panel_progressBars.add(progressBar_Zip);
 	}
 
 	/**
@@ -125,15 +170,20 @@ public class MainForm {
 			i++;
 		}
 
-		lblPath.setText("Detsumm: ");
-		label.setText("Extract PDF...");
-		converter.convertToImage(filePath);
-		textPane_1.setText("Zip To CBZ...");
-		panel_1.repaint();
-		converter.zip(filePath);
-
-		textPane_2.setText("Done!");
-		panel_1.repaint();
-
+		lblExtract.setText("Extract PDF...");
+		converter.convertToImage(filePath, progressBar_Extraction);
+		lblZip.setText("Zip To CBZ...");
+		converter.zip(filePath, progressBar_Zip);
+		lblDone.setText("Done!");
+		alreadyRunning = false;
+	}
+	
+	private void resetElements(){
+		lblExtract.setText("");
+		lblZip.setText("");
+		lblDone.setText("");
+		
+		progressBar_Extraction.setValue(0);
+		progressBar_Zip.setValue(0);
 	}
 }
