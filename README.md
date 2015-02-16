@@ -15,4 +15,3 @@ TODOs:
 - improving GUI
 - some testing
 - add options and make the converter more configurable
-- add file browser
